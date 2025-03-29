@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'dart:io';
+import 'dart:async';
 
 late List<CameraDescription> cameras;
 
@@ -45,6 +46,9 @@ class _CameraHomeState extends State<CameraHome> {
 
   Offset? _tapPosition;
   bool _showFocusCircle = false;
+
+  Duration _recordDuration = Duration.zero;
+  Timer? _recordTimer;
 
   @override
   void initState() {
@@ -151,6 +155,24 @@ class _CameraHomeState extends State<CameraHome> {
     });
   }
 
+  void _startRecordTimer() {
+    _recordTimer?.cancel();
+    _recordDuration = Duration.zero;
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _recordDuration += const Duration(seconds: 1);
+      });
+    });
+  }
+
+  void _stopRecordTimer() {
+    _recordTimer?.cancel();
+    _recordTimer = null;
+    setState(() {
+      _recordDuration = Duration.zero;
+    });
+  }
+
   void _onCapturePressed() async {
     if (!_controller.value.isInitialized) return;
 
@@ -172,6 +194,7 @@ class _CameraHomeState extends State<CameraHome> {
         if (_isRecording) {
           final XFile videoFile = await _controller.stopVideoRecording();
           setState(() => _isRecording = false);
+          _stopRecordTimer();
 
           print("🎥 Video saved to: ${videoFile.path}");
 
@@ -181,12 +204,19 @@ class _CameraHomeState extends State<CameraHome> {
           await _controller.prepareForVideoRecording();
           await _controller.startVideoRecording();
           setState(() => _isRecording = true);
-          print('🔴 Recording started...');
+          _startRecordTimer();
         }
       }
     } catch (e) {
       print('❌ Error: $e');
     }
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
   }
 
   @override
@@ -225,6 +255,29 @@ class _CameraHomeState extends State<CameraHome> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.yellow, width: 2),
+                ),
+              ),
+            ),
+          if (_isRecording)
+            Positioned(
+              top: 50,
+              left: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _formatDuration(_recordDuration),
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
