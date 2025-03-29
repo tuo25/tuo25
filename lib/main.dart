@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'dart:io';
 
 late List<CameraDescription> cameras;
 
@@ -117,21 +118,41 @@ class _CameraHomeState extends State<CameraHome> {
   void _onCapturePressed() async {
     if (!_controller.value.isInitialized) return;
 
+    final permission = await PhotoManager.requestPermissionExtend();
+    if (!permission.isAuth) {
+      print('Permission not granted. Opening settings...');
+      await PhotoManager.openSetting();
+      return;
+    }
+
     try {
-      final permission = await PhotoManager.requestPermissionExtend();
-      if (!permission.isAuth) {
-        print('Permission not granted. Opening settings...');
-        await PhotoManager.openSetting();
-        return;
+      if (_selectedMode == CameraMode.photo) {
+        // 📸 Take a photo
+        final XFile file = await _controller.takePicture();
+        print("📸 Picture saved to: ${file.path}");
+
+        await PhotoManager.editor.saveImageWithPath(file.path);
+        print('✅ Photo saved to gallery!');
+      } else {
+        if (_isRecording) {
+          // 🟥 Stop recording
+          final XFile videoFile = await _controller.stopVideoRecording();
+          setState(() => _isRecording = false);
+
+          print("🎥 Video saved to: ${videoFile.path}");
+
+          await PhotoManager.editor.saveVideo(File(videoFile.path));
+          print('✅ Video saved to gallery!');
+        } else {
+          // ⏺️ Start recording
+          await _controller.prepareForVideoRecording();
+          await _controller.startVideoRecording();
+          setState(() => _isRecording = true);
+          print('🔴 Recording started...');
+        }
       }
-
-      final XFile file = await _controller.takePicture();
-      print("📸 Picture captured: ${file.path}");
-
-      final result = await PhotoManager.editor.saveImageWithPath(file.path);
-      print('✅ Photo saved to gallery! Asset ID: ${result.id}');
     } catch (e) {
-      print("❌ Error capturing or saving picture: $e");
+      print('❌ Error: $e');
     }
   }
 
