@@ -40,8 +40,11 @@ class _CameraHomeState extends State<CameraHome> {
   double _minZoom = 1.0;
   double _maxZoom = 1.0;
 
-  CameraMode _selectedMode = CameraMode.photo;
+  CameraMode _selectedMode = CameraMode.video;
   bool _isRecording = false;
+
+  Offset? _tapPosition;
+  bool _showFocusCircle = false;
 
   @override
   void initState() {
@@ -115,6 +118,39 @@ class _CameraHomeState extends State<CameraHome> {
     await _controller.setZoomLevel(_currentZoom);
   }
 
+  void _onTapToFocus(TapDownDetails details) async {
+    if (!_controller.value.isInitialized) return;
+
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final Offset localPoint = box.globalToLocal(details.globalPosition);
+
+    final double dx = localPoint.dx / box.size.width;
+    final double dy = localPoint.dy / box.size.height;
+
+    final Offset point = Offset(dx, dy);
+
+    try {
+      await _controller.setFocusPoint(point);
+      await _controller.setExposurePoint(point);
+      print('🔍 Focus & exposure set to $point');
+    } catch (e) {
+      print('❌ Failed to set focus: $e');
+    }
+
+    _showFocusIndicator(localPoint);
+  }
+
+  void _showFocusIndicator(Offset offset) {
+    setState(() {
+      _tapPosition = offset;
+      _showFocusCircle = true;
+    });
+
+    Future.delayed(const Duration(seconds: 1), () {
+      setState(() => _showFocusCircle = false);
+    });
+  }
+
   void _onCapturePressed() async {
     if (!_controller.value.isInitialized) return;
 
@@ -127,7 +163,6 @@ class _CameraHomeState extends State<CameraHome> {
 
     try {
       if (_selectedMode == CameraMode.photo) {
-        // 📸 Take a photo
         final XFile file = await _controller.takePicture();
         print("📸 Picture saved to: ${file.path}");
 
@@ -135,7 +170,6 @@ class _CameraHomeState extends State<CameraHome> {
         print('✅ Photo saved to gallery!');
       } else {
         if (_isRecording) {
-          // 🟥 Stop recording
           final XFile videoFile = await _controller.stopVideoRecording();
           setState(() => _isRecording = false);
 
@@ -144,7 +178,6 @@ class _CameraHomeState extends State<CameraHome> {
           await PhotoManager.editor.saveVideo(File(videoFile.path));
           print('✅ Video saved to gallery!');
         } else {
-          // ⏺️ Start recording
           await _controller.prepareForVideoRecording();
           await _controller.startVideoRecording();
           setState(() => _isRecording = true);
@@ -165,6 +198,10 @@ class _CameraHomeState extends State<CameraHome> {
             child:
                 _isCameraInitialized
                     ? GestureDetector(
+                      onTapDown: (TapDownDetails details) {
+                        _onTapToFocus(details);
+                        _showFocusIndicator(details.globalPosition);
+                      },
                       onScaleStart: _handleScaleStart,
                       onScaleUpdate: _handleScaleUpdate,
                       child: FittedBox(
@@ -178,7 +215,19 @@ class _CameraHomeState extends State<CameraHome> {
                     )
                     : const Center(child: CircularProgressIndicator()),
           ),
-          // Capture/Record Button
+          if (_showFocusCircle && _tapPosition != null)
+            Positioned(
+              left: _tapPosition!.dx - 20,
+              top: _tapPosition!.dy - 20,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.yellow, width: 2),
+                ),
+              ),
+            ),
           Positioned(
             bottom: 50,
             left: 0,
@@ -210,7 +259,6 @@ class _CameraHomeState extends State<CameraHome> {
               ),
             ),
           ),
-          // Toggle Button (Photo <-> Video)
           Positioned(
             top: 50,
             right: 20,
