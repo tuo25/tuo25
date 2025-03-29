@@ -32,8 +32,11 @@ class _CameraHomeState extends State<CameraHome> {
   late CameraController _controller;
   bool _isCameraInitialized = false;
 
-  double _currentZoom = 1.0; // Added variable for current zoom level
-  double _baseZoom = 1.0; // Added variable for base zoom level
+  double _currentZoom = 1.0;
+  double _baseZoom = 1.0;
+
+  double _minZoom = 1.0;
+  double _maxZoom = 1.0;
 
   @override
   void initState() {
@@ -50,6 +53,11 @@ class _CameraHomeState extends State<CameraHome> {
 
     try {
       await _controller.initialize();
+
+      // Set custom zoom range (1x to 5x)
+      _minZoom = 1.0;
+      _maxZoom = 5.0;
+
       if (!mounted) return;
       setState(() {
         _isCameraInitialized = true;
@@ -65,6 +73,16 @@ class _CameraHomeState extends State<CameraHome> {
     super.dispose();
   }
 
+  void _handleScaleStart(ScaleStartDetails details) {
+    _baseZoom = _currentZoom;
+  }
+
+  void _handleScaleUpdate(ScaleUpdateDetails details) async {
+    double newZoom = (_baseZoom * details.scale).clamp(_minZoom, _maxZoom);
+    _currentZoom = newZoom;
+    await _controller.setZoomLevel(_currentZoom);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -73,12 +91,16 @@ class _CameraHomeState extends State<CameraHome> {
           Positioned.fill(
             child:
                 _isCameraInitialized
-                    ? FittedBox(
-                      fit: BoxFit.cover,
-                      child: SizedBox(
-                        width: _controller.value.previewSize?.height ?? 0,
-                        height: _controller.value.previewSize?.width ?? 0,
-                        child: CameraPreview(_controller),
+                    ? GestureDetector(
+                      onScaleStart: _handleScaleStart,
+                      onScaleUpdate: _handleScaleUpdate,
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _controller.value.previewSize?.width ?? 0,
+                          height: _controller.value.previewSize?.height ?? 0,
+                          child: CameraPreview(_controller),
+                        ),
                       ),
                     )
                     : const Center(child: CircularProgressIndicator()),
