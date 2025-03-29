@@ -50,6 +50,8 @@ class _CameraHomeState extends State<CameraHome> {
   Duration _recordDuration = Duration.zero;
   Timer? _recordTimer;
 
+  bool _isConnectedToTUO = false;
+
   @override
   void initState() {
     super.initState();
@@ -212,6 +214,20 @@ class _CameraHomeState extends State<CameraHome> {
     }
   }
 
+  void _toggleBluetoothConnection() {
+    setState(() {
+      _isConnectedToTUO = !_isConnectedToTUO;
+    });
+
+    if (_isConnectedToTUO) {
+      print("🔷 Connected to TUO");
+      // TODO: Trigger real Bluetooth connect
+    } else {
+      print("❌ Disconnected from TUO");
+      // TODO: Trigger real Bluetooth disconnect
+    }
+  }
+
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final minutes = twoDigits(duration.inMinutes.remainder(60));
@@ -308,6 +324,37 @@ class _CameraHomeState extends State<CameraHome> {
                       size: 30,
                     ),
                   ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 50,
+            right: 20,
+            child: GestureDetector(
+              onTap: _toggleBluetoothConnection,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color:
+                      _isConnectedToTUO
+                          ? Colors.green
+                          : Colors.black.withOpacity(0.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  _isConnectedToTUO
+                      ? Icons.bluetooth_connected
+                      : Icons.bluetooth,
+                  color: Colors.white,
+                  size: 28,
                 ),
               ),
             ),
