@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 late List<CameraDescription> cameras;
 
@@ -38,7 +39,7 @@ class _CameraHomeState extends State<CameraHome> {
   double _minZoom = 1.0;
   double _maxZoom = 1.0;
 
-  CameraMode _selectedMode = CameraMode.video; // Start in video mode
+  CameraMode _selectedMode = CameraMode.photo;
   bool _isRecording = false;
 
   @override
@@ -50,22 +51,17 @@ class _CameraHomeState extends State<CameraHome> {
   Future<void> _setupCamera() async {
     _controller = CameraController(
       cameras.first,
-      ResolutionPreset.medium,
-      enableAudio:
-          _selectedMode == CameraMode.video, // Enable audio for video mode
+      ResolutionPreset.max,
+      enableAudio: _selectedMode == CameraMode.video,
     );
 
     try {
       await _controller.initialize();
-
-      // Set custom zoom range (1x to 5x)
       _minZoom = 1.0;
       _maxZoom = 5.0;
 
       if (!mounted) return;
-      setState(() {
-        _isCameraInitialized = true;
-      });
+      setState(() => _isCameraInitialized = true);
     } catch (e) {
       print("Camera error: $e");
     }
@@ -74,18 +70,14 @@ class _CameraHomeState extends State<CameraHome> {
   Future<void> _switchCameraMode(CameraMode newMode) async {
     if (_selectedMode == newMode || !_isCameraInitialized) return;
 
-    setState(() {
-      _isCameraInitialized = false;
-    });
+    setState(() => _isCameraInitialized = false);
 
     try {
-      // Stop recording if switching from video while recording
       if (_isRecording) {
         await _controller.stopVideoRecording();
         setState(() => _isRecording = false);
       }
 
-      // Dispose the previous controller before creating a new one
       await _controller.dispose();
 
       _controller = CameraController(
@@ -102,9 +94,7 @@ class _CameraHomeState extends State<CameraHome> {
       });
     } catch (e) {
       print('Error switching camera mode: $e');
-      setState(() {
-        _isCameraInitialized = true; // Ensure the UI doesn't freeze
-      });
+      setState(() => _isCameraInitialized = true);
     }
   }
 
@@ -125,14 +115,23 @@ class _CameraHomeState extends State<CameraHome> {
   }
 
   void _onCapturePressed() async {
-    if (_controller.value.isInitialized) {
-      try {
-        final XFile file = await _controller.takePicture();
-        print("Picture saved to: ${file.path}");
-        // You can add logic to display or save the captured image
-      } catch (e) {
-        print("Error capturing picture: $e");
+    if (!_controller.value.isInitialized) return;
+
+    try {
+      final permission = await PhotoManager.requestPermissionExtend();
+      if (!permission.isAuth) {
+        print('Permission not granted. Opening settings...');
+        await PhotoManager.openSetting();
+        return;
       }
+
+      final XFile file = await _controller.takePicture();
+      print("📸 Picture captured: ${file.path}");
+
+      final result = await PhotoManager.editor.saveImageWithPath(file.path);
+      print('✅ Photo saved to gallery! Asset ID: ${result.id}');
+    } catch (e) {
+      print("❌ Error capturing or saving picture: $e");
     }
   }
 
@@ -156,11 +155,9 @@ class _CameraHomeState extends State<CameraHome> {
                         ),
                       ),
                     )
-                    : const Center(
-                      child: CircularProgressIndicator(),
-                    ), // Show loading indicator
+                    : const Center(child: CircularProgressIndicator()),
           ),
-          // Record/Capture Button
+          // Capture/Record Button
           Positioned(
             bottom: 50,
             left: 0,
@@ -174,36 +171,25 @@ class _CameraHomeState extends State<CameraHome> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 4),
-                    color:
-                        _selectedMode == CameraMode.video
-                            ? (_isRecording ? Colors.red : Colors.white)
-                            : Colors.white,
+                    color: Colors.white,
                   ),
                   child: Center(
-                    child:
-                        _selectedMode == CameraMode.video
-                            ? (_isRecording
-                                ? const Icon(
-                                  Icons.stop,
-                                  color: Colors.white,
-                                  size: 30,
-                                )
-                                : const Icon(
-                                  Icons.videocam,
-                                  color: Colors.black,
-                                  size: 30,
-                                ))
-                            : const Icon(
-                              Icons.camera_alt,
-                              color: Colors.black,
-                              size: 30,
-                            ),
+                    child: Icon(
+                      _selectedMode == CameraMode.video
+                          ? (_isRecording ? Icons.stop : Icons.videocam)
+                          : Icons.camera_alt,
+                      color:
+                          _selectedMode == CameraMode.video && _isRecording
+                              ? Colors.white
+                              : Colors.black,
+                      size: 30,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-          // Toggle Button
+          // Toggle Button (Photo <-> Video)
           Positioned(
             top: 50,
             right: 20,
