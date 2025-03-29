@@ -38,6 +38,9 @@ class _CameraHomeState extends State<CameraHome> {
   double _minZoom = 1.0;
   double _maxZoom = 1.0;
 
+  CameraMode _selectedMode = CameraMode.video; // Start in video mode
+  bool _isRecording = false;
+
   @override
   void initState() {
     super.initState();
@@ -48,7 +51,8 @@ class _CameraHomeState extends State<CameraHome> {
     _controller = CameraController(
       cameras.first,
       ResolutionPreset.medium,
-      enableAudio: false,
+      enableAudio:
+          _selectedMode == CameraMode.video, // Enable audio for video mode
     );
 
     try {
@@ -67,6 +71,43 @@ class _CameraHomeState extends State<CameraHome> {
     }
   }
 
+  Future<void> _switchCameraMode(CameraMode newMode) async {
+    if (_selectedMode == newMode || !_isCameraInitialized) return;
+
+    setState(() {
+      _isCameraInitialized = false;
+    });
+
+    try {
+      // Stop recording if switching from video while recording
+      if (_isRecording) {
+        await _controller.stopVideoRecording();
+        setState(() => _isRecording = false);
+      }
+
+      // Dispose the previous controller before creating a new one
+      await _controller.dispose();
+
+      _controller = CameraController(
+        cameras.first,
+        ResolutionPreset.max,
+        enableAudio: newMode == CameraMode.video,
+      );
+
+      await _controller.initialize();
+
+      setState(() {
+        _selectedMode = newMode;
+        _isCameraInitialized = true;
+      });
+    } catch (e) {
+      print('Error switching camera mode: $e');
+      setState(() {
+        _isCameraInitialized = true; // Ensure the UI doesn't freeze
+      });
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -81,6 +122,18 @@ class _CameraHomeState extends State<CameraHome> {
     double newZoom = (_baseZoom * details.scale).clamp(_minZoom, _maxZoom);
     _currentZoom = newZoom;
     await _controller.setZoomLevel(_currentZoom);
+  }
+
+  void _onCapturePressed() async {
+    if (_controller.value.isInitialized) {
+      try {
+        final XFile file = await _controller.takePicture();
+        print("Picture saved to: ${file.path}");
+        // You can add logic to display or save the captured image
+      } catch (e) {
+        print("Error capturing picture: $e");
+      }
+    }
   }
 
   @override
@@ -103,10 +156,87 @@ class _CameraHomeState extends State<CameraHome> {
                         ),
                       ),
                     )
-                    : const Center(child: CircularProgressIndicator()),
+                    : const Center(
+                      child: CircularProgressIndicator(),
+                    ), // Show loading indicator
+          ),
+          // Record/Capture Button
+          Positioned(
+            bottom: 50,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: GestureDetector(
+                onTap: _onCapturePressed,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 4),
+                    color:
+                        _selectedMode == CameraMode.video
+                            ? (_isRecording ? Colors.red : Colors.white)
+                            : Colors.white,
+                  ),
+                  child: Center(
+                    child:
+                        _selectedMode == CameraMode.video
+                            ? (_isRecording
+                                ? const Icon(
+                                  Icons.stop,
+                                  color: Colors.white,
+                                  size: 30,
+                                )
+                                : const Icon(
+                                  Icons.videocam,
+                                  color: Colors.black,
+                                  size: 30,
+                                ))
+                            : const Icon(
+                              Icons.camera_alt,
+                              color: Colors.black,
+                              size: 30,
+                            ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Toggle Button
+          Positioned(
+            top: 50,
+            right: 20,
+            child: GestureDetector(
+              onTap:
+                  _isCameraInitialized
+                      ? () {
+                        final newMode =
+                            _selectedMode == CameraMode.photo
+                                ? CameraMode.video
+                                : CameraMode.photo;
+                        _switchCameraMode(newMode);
+                      }
+                      : null,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.black.withOpacity(0.5),
+                ),
+                child: Icon(
+                  _selectedMode == CameraMode.photo
+                      ? Icons.videocam
+                      : Icons.camera_alt,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 }
+
+enum CameraMode { photo, video }
