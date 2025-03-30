@@ -1,0 +1,11 @@
+name: tflite_flutter_helper
+description: Fully patched version of the TFLite helper for TUO.
+version: 0.0.4
+
+environment:
+  sdk: ">=2.17.0 <4.0.0"
+
+dependencies:
+  tflite_flutter:
+    path: /Users/ronolson/Documents/tflite_flutter
+  image: ^3.2.2

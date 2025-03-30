@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:tuo_app/services/tflite_service.dart';
 import 'dart:io';
 import 'dart:async';
 
@@ -52,10 +53,13 @@ class _CameraHomeState extends State<CameraHome> {
 
   bool _isConnectedToTUO = false;
 
+  final TFLiteService _tfliteService = TFLiteService();
+
   @override
   void initState() {
     super.initState();
     _setupCamera();
+    _tfliteService.loadModel(); // 👈 Load the model
   }
 
   Future<void> _setupCamera() async {

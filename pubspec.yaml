@@ -30,13 +30,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
-  camera: ^0.10.5+9
-  photo_manager: ^3.0.0
+  camera: ^0.10.5+5
+  tflite_flutter_local:
+    path: /Users/ronolson/Documents/tflite_flutter_local
+  tflite_flutter_helper:
+    path: /Users/ronolson/Documents/tflite_flutter_helper
   path_provider: ^2.1.1
+  image: ^3.2.2
+  cupertino_icons: ^1.0.8
+  photo_manager: ^3.0.0
   permission_handler: ^11.3.0
 
 dev_dependencies:
@@ -60,7 +62,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
-
+  assets:
+    # - assets/models/detect.tflite
+    # Removed reference to non-existent file
+    #    - assets/models/
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

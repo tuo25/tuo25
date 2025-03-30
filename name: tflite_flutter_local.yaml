@@ -1,0 +1,4 @@
+name: tflite_flutter_local
+dependencies:
+  tflite_flutter:
+    path: /Users/ronolson/Documents/tflite_flutter_local
