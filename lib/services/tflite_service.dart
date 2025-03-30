@@ -2,6 +2,7 @@ import 'package:tflite_flutter_local/tflite_flutter.dart';
 import 'package:flutter/services.dart'; // Added for rootBundle
 import 'package:camera/camera.dart'; // Added for CameraImage
 import 'package:image/image.dart' as img; // Added for img.Image
+import 'dart:io';
 
 enum ResizeMethod { bilinear, nearest }
 
@@ -38,26 +39,27 @@ class ImageProcessorBuilder {
 
 class TFLiteService {
   late Interpreter _interpreter;
-  late List<String> _labels;
+  List<String> _labels = [];
 
   Future<void> loadModel() async {
     try {
-      // Load the model
-      _interpreter = await Interpreter.fromAsset('models/detect.tflite');
-      print('✅ TFLite model loaded');
-
-      // Load the label map
+      // Load labels
       final labelData = await rootBundle.loadString(
         'assets/models/labelmap.txt',
       );
-      _labels = labelData.split('\n');
-      print('✅ Labels loaded: ${_labels.length} classes');
+      _labels = labelData.split('\n').where((e) => e.isNotEmpty).toList();
+
+      // Load model
+      _interpreter = await Interpreter.fromAsset('detect.tflite');
+      _interpreter.allocateTensors();
+
+      print('✅ Model & labels loaded successfully');
+      print('Labels: $_labels');
     } catch (e) {
-      print('❌ Failed to load model or labels: $e');
+      print('❌ Failed to load model: $e');
     }
   }
 
-  Interpreter get interpreter => _interpreter;
   List<String> get labels => _labels;
 
   void runModelOnFrame(CameraImage image) {
