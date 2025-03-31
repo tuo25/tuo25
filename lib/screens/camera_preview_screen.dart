@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:tflite_flutter_local/tflite_flutter.dart';
 import '../services/tflite_service.dart'; // Ensure this path matches where you saved it
 
 class CameraPreviewScreen extends StatefulWidget {

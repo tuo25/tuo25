@@ -2,7 +2,6 @@ import 'package:tflite_flutter_local/tflite_flutter.dart';
 import 'package:flutter/services.dart'; // Added for rootBundle
 import 'package:camera/camera.dart'; // Added for CameraImage
 import 'package:image/image.dart' as img; // Added for img.Image
-import 'dart:io';
 
 enum ResizeMethod { bilinear, nearest }
 
