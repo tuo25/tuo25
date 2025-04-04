@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'dart:async';
 
 late List<CameraDescription> _cameras;
 
@@ -36,11 +37,7 @@ class _ManualBoxScreenState extends State<ManualBoxScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = CameraController(_cameras[0], ResolutionPreset.high);
-    _controller.initialize().then((_) {
-      if (!mounted) return;
-      setState(() {});
-    });
+    _setupCamera();
   }
 
   @override
@@ -49,36 +46,26 @@ class _ManualBoxScreenState extends State<ManualBoxScreen> {
     super.dispose();
   }
 
-  void _onScaleStart(ScaleStartDetails details) {
-    setState(() {
-      _startPoint = details.focalPoint;
-      _box = Rect.fromLTWH(
-        _startPoint!.dx,
-        _startPoint!.dy,
-        0,
-        0,
-      ); // 💥 Initialize box
-    });
-  }
+  Future<void> _setupCamera() async {
+    _controller = CameraController(_cameras.first, ResolutionPreset.high);
 
-  void _onScaleUpdate(ScaleUpdateDetails details) {
-    final currentPoint = details.focalPoint;
-    setState(() {
-      _box = Rect.fromPoints(_startPoint!, currentPoint); // 💥 Update box
-    });
-  }
+    try {
+      await _controller.initialize();
 
-  void _onScaleEnd(ScaleEndDetails details) {
-    if (_box != null) {
-      final size = MediaQuery.of(context).size;
-      final x = _box!.left / size.width;
-      final y = _box!.top / size.height;
-      final w = _box!.width / size.width;
-      final h = _box!.height / size.height;
+      // 💥 Commented out zoom initialization
+      /*
+      final _minZoom = await _controller.getMinZoomLevel();
+      final _maxZoom = await _controller.getMaxZoomLevel();
+      final _currentZoom = _minZoom;
+      await _controller.setZoomLevel(_currentZoom);
+      */
 
-      print('📦 Box Drawn: x=$x, y=$y, w=$w, h=$h');
+      print("📷 Camera initialized");
 
-      // TODO: Send these values to TUO tracking logic
+      if (!mounted) return;
+      setState(() {});
+    } catch (e) {
+      print("Camera error: $e");
     }
   }
 
@@ -92,16 +79,41 @@ class _ManualBoxScreenState extends State<ManualBoxScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          CameraPreview(_controller),
           GestureDetector(
-            behavior: HitTestBehavior.opaque, // 💥 Ensure touches are detected
-            onScaleStart: _onScaleStart,
-            onScaleUpdate: _onScaleUpdate,
-            onScaleEnd: _onScaleEnd,
-            onDoubleTap:
-                () => setState(() => _box = null), // 💥 Reset box on double-tap
+            behavior: HitTestBehavior.opaque,
+            onPanStart: (details) {
+              _startPoint = details.localPosition;
+              _box = Rect.fromLTWH(_startPoint!.dx, _startPoint!.dy, 0, 0);
+            },
+            onPanUpdate: (details) {
+              final currentPoint = details.localPosition;
+              setState(() {
+                _box = Rect.fromPoints(_startPoint!, currentPoint);
+              });
+            },
+            onPanEnd: (details) {
+              if (_box != null) {
+                final size = MediaQuery.of(context).size;
+                final x = _box!.left / size.width;
+                final y = _box!.top / size.height;
+                final w = _box!.width / size.width;
+                final h = _box!.height / size.height;
+
+                print('📦 Box Drawn: x=$x, y=$y, w=$w, h=$h');
+              }
+            },
             child: Stack(
               children: [
+                // Camera Preview
+                FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: _controller.value.previewSize?.width ?? 0,
+                    height: _controller.value.previewSize?.height ?? 0,
+                    child: CameraPreview(_controller),
+                  ),
+                ),
+                // Draw Box Overlay
                 if (_box != null)
                   Positioned(
                     left: _box!.left,

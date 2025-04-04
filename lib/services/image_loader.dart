@@ -9,7 +9,7 @@ Future<TensorImage> loadTestImage() async {
 
   TensorImage inputImage = TensorImage.fromImage(decodedImage);
   inputImage = ImageProcessorBuilder()
-      .add(ResizeOp(300, 300, ResizeMethod.nearestNeighbor))
+      .add(ResizeOp(300, 300, ResizeMethod.NEAREST))
       .build()
       .process(inputImage);
 

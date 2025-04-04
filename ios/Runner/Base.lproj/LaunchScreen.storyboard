@@ -29,7 +29,7 @@
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                                 <attributedString key="attributedText">
-                                    <fragment content="Made in          Idaho">
+                                    <fragment content="Built in              Idaho">
                                         <attributes>
                                             <color key="NSColor" systemColor="labelColor"/>
                                             <font key="NSFont" metaFont="system" size="34"/>

@@ -36,11 +36,11 @@ class _CameraHomeState extends State<CameraHome> {
   late CameraController _controller;
   bool _isCameraInitialized = false;
 
-  double _currentZoom = 1.0;
+  // Removed unused _currentZoom field
   double _baseZoom = 1.0;
 
-  double _minZoom = 1.0;
-  double _maxZoom = 1.0;
+  // Removed unused _minZoom field
+  // Removed unused _maxZoom field
 
   CameraMode _selectedMode = CameraMode.video;
   bool _isRecording = false;
@@ -119,16 +119,6 @@ class _CameraHomeState extends State<CameraHome> {
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  void _handleScaleStart(ScaleStartDetails details) {
-    _baseZoom = _currentZoom;
-  }
-
-  void _handleScaleUpdate(ScaleUpdateDetails details) async {
-    double newZoom = (_baseZoom * details.scale).clamp(_minZoom, _maxZoom);
-    _currentZoom = newZoom;
-    await _controller.setZoomLevel(_currentZoom);
   }
 
   void _onTapToFocus(TapDownDetails details) async {
