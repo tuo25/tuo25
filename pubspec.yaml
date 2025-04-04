@@ -30,7 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  camera: ^0.10.5+5
+  camera: ^0.9.4+5
   tflite_flutter_local:
     path: /Users/ronolson/Documents/tflite_flutter_local
   tflite_flutter_helper:

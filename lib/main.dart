@@ -55,6 +55,9 @@ class _CameraHomeState extends State<CameraHome> {
 
   final TFLiteService _tfliteService = TFLiteService();
 
+  Rect? _box;
+  Offset? _startPoint;
+
   @override
   void initState() {
     super.initState();
@@ -239,6 +242,34 @@ class _CameraHomeState extends State<CameraHome> {
     return '$minutes:$seconds';
   }
 
+  void _onPanStart(DragStartDetails details) {
+    setState(() {
+      _startPoint = details.localPosition;
+      _box = Rect.fromLTWH(_startPoint!.dx, _startPoint!.dy, 0, 0);
+    });
+  }
+
+  void _onPanUpdate(DragUpdateDetails details) {
+    final currentPoint = details.localPosition;
+    setState(() {
+      _box = Rect.fromPoints(_startPoint!, currentPoint);
+    });
+  }
+
+  void _onPanEnd(DragEndDetails details) {
+    if (_box != null) {
+      final size = MediaQuery.of(context).size;
+      final x = _box!.left / size.width;
+      final y = _box!.top / size.height;
+      final w = _box!.width / size.width;
+      final h = _box!.height / size.height;
+
+      print('📦 Box Drawn: x=$x, y=$y, w=$w, h=$h');
+
+      // You can now send these values to TUO tracking logic
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -252,8 +283,11 @@ class _CameraHomeState extends State<CameraHome> {
                         _onTapToFocus(details);
                         _showFocusIndicator(details.globalPosition);
                       },
-                      onScaleStart: _handleScaleStart,
-                      onScaleUpdate: _handleScaleUpdate,
+                      // onScaleStart: _handleScaleStart,   // ❌ Comment this out
+                      // onScaleUpdate: _handleScaleUpdate, // ❌ Comment this out
+                      onPanStart: _onPanStart,
+                      onPanUpdate: _onPanUpdate,
+                      onPanEnd: _onPanEnd,
                       child: FittedBox(
                         fit: BoxFit.cover,
                         child: SizedBox(
@@ -392,6 +426,18 @@ class _CameraHomeState extends State<CameraHome> {
               ),
             ),
           ),
+          if (_box != null)
+            Positioned(
+              left: _box!.left,
+              top: _box!.top,
+              child: Container(
+                width: _box!.width,
+                height: _box!.height,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.red, width: 2),
+                ),
+              ),
+            ),
         ],
       ),
     );
